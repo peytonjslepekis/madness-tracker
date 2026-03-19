@@ -302,8 +302,8 @@ let eliminatedTeams = new Set(); // lowercase canonical names
 let aliveCount = {}; // drafter → count
 
 // ─── ESPN API ─────────────────────────────────────────────────────────────────
-const PIPEDREAM = 'https://eopfb8h9cqr5vtd.m.pipedream.net';
-
+const PIPEDREAM = '/bracket';
+ 
 async function loadData() {
   setStatus('Fetching live bracket from ESPN...', true);
   try {
