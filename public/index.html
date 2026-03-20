@@ -274,6 +274,8 @@ const ALIASES = {
   'VCU': ['VCU','Virginia Commonwealth'],
   'Hawaii': ["Hawaii", "Hawai'i", "Hawai'i Rainbow Warriors"],
   'St. Louis': ['St. Louis', 'Saint Louis', 'Saint Louis Billikens'],
+  'UNI': ['UNI', 'Northern Iowa', 'North Iowa'],
+  'LIU': ['LIU', 'Long Island University', 'LIU Brooklyn'],
 };
 
 // Build reverse lookup: normalized ESPN name → drafter
@@ -294,12 +296,7 @@ const TEAM_MAP = buildTeamMap();
 function findDrafter(teamName) {
   if (!teamName) return null;
   const lower = teamName.toLowerCase();
-  // exact
   if (TEAM_MAP[lower]) return TEAM_MAP[lower];
-  // partial
-  for (const [key, val] of Object.entries(TEAM_MAP)) {
-    if (lower.includes(key) || key.includes(lower)) return val;
-  }
   return null;
 }
 
