@@ -70,8 +70,10 @@
 
   /* MAIN LAYOUT */
   .page { display: none; padding: 2rem; }
-  .page.active { display: flex; gap: 2rem; align-items: flex-start; }
+  .page.active { display: block; }
+  #page-bracket.active { display: block; }
   #page-rosters.active { display: block; }
+  #page-standings.active { display: block; }
 
   /* LEADERBOARD SIDEBAR */
   .sidebar { width: 200px; flex-shrink: 0; position: sticky; top: 1rem; }
@@ -240,7 +242,7 @@
     min-width: 16px;
     text-align: right;
   }
-  .game-team-name { font-size: 0.8rem; font-weight: 700; flex: 1; }
+  .game-team-name { font-size: 0.8rem; font-weight: 700; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .game-team-drafter {
     font-family: 'DM Mono', monospace;
     font-size: 0.55rem;
@@ -268,6 +270,10 @@
     flex-basis: 100%;
   }
   .round-section-header:first-child { margin-top: 0; }
+  .standings-title {
+    font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 1rem;
+  }
   .no-games {
     font-family: 'DM Mono', monospace;
     font-size: 0.7rem;
@@ -301,13 +307,10 @@
 <nav>
   <button class="tab active" onclick="showPage('bracket')">Today</button>
   <button class="tab" onclick="showPage('rosters')">Rosters</button>
+  <button class="tab" onclick="showPage('standings')">Standings</button>
 </nav>
 
 <div class="page active" id="page-bracket">
-  <div class="sidebar">
-    <div class="sidebar-title">Leaderboard</div>
-    <div id="leaderboard">—</div>
-  </div>
   <div class="bracket-main" id="bracket-main">
     <div style="color: var(--muted); font-family: 'DM Mono', monospace; font-size:0.75rem; padding: 2rem 0;">Loading...</div>
   </div>
@@ -315,6 +318,12 @@
 
 <div class="page" id="page-rosters">
   <div class="rosters-grid" id="rosters-grid">Loading...</div>
+</div>
+
+<div class="page" id="page-standings">
+  <div style="max-width: 420px;">
+    <div id="leaderboard">—</div>
+  </div>
 </div>
 
 <script>
