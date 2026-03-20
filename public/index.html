@@ -296,7 +296,13 @@ const TEAM_MAP = buildTeamMap();
 function findDrafter(teamName) {
   if (!teamName) return null;
   const lower = teamName.toLowerCase();
+  // exact
   if (TEAM_MAP[lower]) return TEAM_MAP[lower];
+  // check if ESPN name contains our key as a whole word
+  for (const [key, val] of Object.entries(TEAM_MAP)) {
+    const regex = new RegExp(`\\b${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+    if (regex.test(lower)) return val;
+  }
   return null;
 }
 
