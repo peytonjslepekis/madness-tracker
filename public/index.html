@@ -247,6 +247,13 @@ const DRAFTERS = {
   Pojman: { teams: ['Iowa','Illinois','North Carolina','Tennessee','Utah State','Texas A&M','Wright State','Kennesaw State'], you: false },
 };
 
+// Manually seeded eliminations from completed rounds — add to this as tournament progresses
+const SEEDED_ELIMINATIONS = new Set([
+  'wisconsin','north carolina','byu','ohio state','georgia',
+  "st. mary's",'troy','hawaii','north dakota state','kennesaw state',
+  'penn','idaho','siena','howard','mcneese','south florida'
+]);
+
 // Normalize team names for matching ESPN data
 const ALIASES = {
   'Prairie View A&M': ['Prairie View A&M','Prairie View'],
@@ -323,7 +330,7 @@ async function loadData() {
 }
 
 function processESPN(data) {
-  eliminatedTeams = new Set();
+  eliminatedTeams = new Set([...SEEDED_ELIMINATIONS]);
   bracketData = data;
   const events = data.events || [];
 
@@ -352,14 +359,14 @@ function computeAlive() {
   for (const [drafter, data] of Object.entries(DRAFTERS)) {
     let count = 0;
     for (const team of data.teams) {
-      if (!eliminatedTeams.has(team.toLowerCase())) count++;
+      if (!eliminatedTeams.has(team.toLowerCase()) && !SEEDED_ELIMINATIONS.has(team.toLowerCase())) count++;
     }
     aliveCount[drafter] = count;
   }
 }
 
 function isEliminated(teamName) {
-  return eliminatedTeams.has(teamName.toLowerCase());
+  return eliminatedTeams.has(teamName.toLowerCase()) || SEEDED_ELIMINATIONS.has(teamName.toLowerCase());
 }
 
 // ─── RENDER ───────────────────────────────────────────────────────────────────
