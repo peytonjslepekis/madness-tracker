@@ -195,6 +195,89 @@
     .rosters-grid { grid-template-columns: 1fr; }
     #leaderboard { grid-template-columns: 1fr; }
   }
+
+  /* GAMES VIEW */
+  .games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    flex: 1;
+    min-width: 0;
+  }
+  .game-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .game-card-header {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim);
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+  }
+  .game-card-header .live { color: var(--accent); }
+  .game-team {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .game-team:last-child { border-bottom: none; }
+  .game-team.winner { background: var(--surface2); }
+  .game-team.loser .game-team-name { text-decoration: line-through; color: var(--dim); }
+  .game-team.loser .game-team-seed { color: var(--dim); }
+  .game-team-seed {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--dim);
+    min-width: 16px;
+    text-align: right;
+  }
+  .game-team-name { font-size: 0.8rem; font-weight: 700; flex: 1; }
+  .game-team-drafter {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--muted);
+  }
+  .game-team-score {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    min-width: 28px;
+    text-align: right;
+  }
+  .game-team.winner .game-team-score { color: var(--accent); }
+  .game-team.loser .game-team-score { color: var(--dim); }
+  .round-section-header {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--accent-dim);
+    margin-bottom: 1rem;
+    margin-top: 1.5rem;
+    flex-basis: 100%;
+  }
+  .round-section-header:first-child { margin-top: 0; }
+  .no-games {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--dim);
+    padding: 2rem 0;
+  }
+  @media (max-width: 640px) {
+    .games-grid { grid-template-columns: 1fr; }
+  }
+
 </style>
 </head>
 <body>
@@ -216,7 +299,7 @@
 </div>
 
 <nav>
-  <button class="tab active" onclick="showPage('bracket')">Bracket</button>
+  <button class="tab active" onclick="showPage('bracket')">Today</button>
   <button class="tab" onclick="showPage('rosters')">Rosters</button>
 </nav>
 
@@ -274,8 +357,6 @@ const ALIASES = {
   'VCU': ['VCU','Virginia Commonwealth'],
   'Hawaii': ["Hawaii", "Hawai'i", "Hawai'i Rainbow Warriors"],
   'St. Louis': ['St. Louis', 'Saint Louis', 'Saint Louis Billikens'],
-  'UNI': ['UNI', 'Northern Iowa', 'North Iowa'],
-  'LIU': ['LIU', 'Long Island University', 'LIU Brooklyn'],
 };
 
 // Build reverse lookup: normalized ESPN name → drafter
@@ -298,10 +379,9 @@ function findDrafter(teamName) {
   const lower = teamName.toLowerCase();
   // exact
   if (TEAM_MAP[lower]) return TEAM_MAP[lower];
-  // check if ESPN name contains our key as a whole word
+  // partial
   for (const [key, val] of Object.entries(TEAM_MAP)) {
-    const regex = new RegExp(`\\b${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
-    if (regex.test(lower)) return val;
+    if (lower.includes(key) || key.includes(lower)) return val;
   }
   return null;
 }
@@ -423,38 +503,38 @@ function renderRosters() {
   document.getElementById('page-rosters').innerHTML = html;
 }
 
-// ─── BRACKET RENDER ───────────────────────────────────────────────────────────
-// We build a visual bracket from ESPN game data grouped by round
-// ESPN rounds: 1=First Four, 2=R64, 3=R32, 4=S16, 5=E8, 6=F4, 7=NCG
+// ─── TODAY'S GAMES VIEW ───────────────────────────────────────────────────────
 
 const ROUND_NAMES = {2:'Round of 64', 3:'Round of 32', 4:'Sweet 16', 5:'Elite 8', 6:'Final Four', 7:'Championship'};
-const REGIONS = ['South','East','Midwest','West'];
+
+function getRoundFromEvent(ev) {
+  const note = ev.notes?.[0]?.headline || '';
+  if (note.includes('First Round') || note.includes('Round of 64')) return 2;
+  if (note.includes('Second Round') || note.includes('Round of 32')) return 3;
+  if (note.includes('Sweet Sixteen') || note.includes('Sweet 16')) return 4;
+  if (note.includes('Elite Eight') || note.includes('Elite 8')) return 5;
+  if (note.includes('Final Four')) return 6;
+  if (note.includes('National Championship') || note.includes('Championship')) return 7;
+  const name = ev.name || '';
+  if (name.includes('First Round')) return 2;
+  if (name.includes('Second Round')) return 3;
+  if (name.includes('Sweet Sixteen') || name.includes('Sweet 16')) return 4;
+  if (name.includes('Elite Eight')) return 5;
+  if (name.includes('Final Four')) return 6;
+  if (name.includes('Championship')) return 7;
+  return 2;
+}
 
 function renderBracket() {
-  if (!bracketData || !bracketData.events) {
-    // Render static roster-only bracket
-    renderStaticRosters();
+  const container = document.getElementById('bracket-main');
+  if (!bracketData || !bracketData.events || bracketData.events.length === 0) {
+    container.innerHTML = '<div class="no-games">No games available right now.</div>';
     return;
   }
 
-  const events = bracketData.events || [];
-  // Group by region then round
-  const byRegion = {};
-  for (const ev of events) {
-    const round = ev.competitions?.[0]?.type?.id || ev.status?.period;
-    const note = ev.notes?.[0]?.headline || '';
-    // Get region from notes or name
-    let region = 'Other';
-    for (const r of REGIONS) {
-      if (note.includes(r) || ev.name?.includes(r)) { region = r; break; }
-    }
-    if (!byRegion[region]) byRegion[region] = {};
-    const roundNum = parseInt(ev.competitions?.[0]?.conferenceCompetition) || getRoundFromEvent(ev);
-    if (!byRegion[region][roundNum]) byRegion[region][roundNum] = [];
-    byRegion[region][roundNum].push(ev);
-  }
+  const events = bracketData.events;
 
-  // Fallback: group purely by round for display
+  // Group by round
   const byRound = {};
   for (const ev of events) {
     const r = getRoundFromEvent(ev);
@@ -462,100 +542,52 @@ function renderBracket() {
     byRound[r].push(ev);
   }
 
-  renderByRound(byRound);
-}
-
-function getRoundFromEvent(ev) {
-  // ESPN encodes round in the event name or notes
-  const name = ev.name || '';
-  if (name.includes('First Four')) return 1;
-  if (name.includes('First Round') || name.includes('Round of 64')) return 2;
-  if (name.includes('Second Round') || name.includes('Round of 32')) return 3;
-  if (name.includes('Sweet Sixteen') || name.includes('Sweet 16')) return 4;
-  if (name.includes('Elite Eight') || name.includes('Elite 8')) return 5;
-  if (name.includes('Final Four')) return 6;
-  if (name.includes('National Championship') || name.includes('Championship')) return 7;
-  // Try status period
-  return ev.status?.period || 2;
-}
-
-function renderByRound(byRound) {
-  const rounds = [2,3,4,5,6,7].filter(r => byRound[r]?.length);
-  if (rounds.length === 0) { renderStaticRosters(); return; }
-
-  let html = '';
-  // Show bracket as a scrollable round-by-round flow
-  html += '<div class="bracket-scroll">';
+  const rounds = Object.keys(byRound).map(Number).sort((a,b) => a-b);
+  let html = '<div class="games-grid">';
 
   for (const rNum of rounds) {
-    const games = byRound[rNum];
-    html += `<div class="round-col">`;
-    html += `<div class="round-header">${ROUND_NAMES[rNum] || 'Round '+rNum}</div>`;
-
-    const spacingMap = {2:0, 3:36, 4:100, 5:228, 6:484, 7:968};
-    const gapBetween = {2:8, 3:44, 4:112, 5:240, 6:500};
-    const topPad = spacingMap[rNum] || 0;
-
-    html += `<div style="padding-top:${topPad}px; display:flex; flex-direction:column; gap:${gapBetween[rNum]||8}px;">`;
-
-    for (const ev of games) {
+    html += `<div class="round-section-header">${ROUND_NAMES[rNum] || 'Round ' + rNum}</div>`;
+    for (const ev of byRound[rNum]) {
       const comp = ev.competitions?.[0];
       const competitors = comp?.competitors || [];
       const completed = comp?.status?.type?.completed;
+      const inProgress = comp?.status?.type?.state === 'in';
+      const statusDetail = comp?.status?.type?.shortDetail || '';
+      const broadcast = ev.broadcast || '';
 
-      html += `<div class="matchup">`;
+      let statusLabel = broadcast ? broadcast : '';
+      if (inProgress) statusLabel = `<span class="live">● LIVE ${comp?.status?.displayClock || ''}</span>`;
+      else if (completed) statusLabel = 'Final';
+
+      html += `<div class="game-card">
+        <div class="game-card-header">
+          <span>${statusDetail && !inProgress ? statusDetail : (completed ? 'Final' : statusDetail)}</span>
+          <span>${inProgress ? '<span class="live">● LIVE</span>' : (broadcast || '')}</span>
+        </div>`;
+
       for (const team of competitors) {
         const tname = team.team?.displayName || team.team?.name || 'TBD';
         const seed = team.curatedRank?.current || team.seed || '';
-        const winner = team.winner;
+        const score = team.score || '';
+        const won = completed && team.winner === true;
         const lost = completed && team.winner === false;
         const info = findDrafter(tname);
         const drafter = info?.drafter || '';
-        const isYou = drafter && DRAFTERS[drafter]?.you;
-        const cls = lost ? 'eliminated' : (winner ? 'winner' : '');
-        html += `<div class="team-slot ${cls}">
-          <span class="slot-seed">${seed}</span>
-          <span class="slot-name">${tname}</span>
-          ${drafter ? `<span class="slot-drafter ${isYou?'you':''}">(${drafter})</span>` : ''}
+        const cls = won ? 'winner' : (lost ? 'loser' : '');
+        html += `<div class="game-team ${cls}">
+          <span class="game-team-seed">${seed}</span>
+          <span class="game-team-name">${tname}</span>
+          ${drafter ? `<span class="game-team-drafter">(${drafter})</span>` : ''}
+          ${score ? `<span class="game-team-score">${score}</span>` : ''}
         </div>`;
       }
-      if (competitors.length === 0) {
-        html += `<div class="team-slot tbd"><span class="slot-name">TBD</span></div>
-                 <div class="team-slot tbd"><span class="slot-name">TBD</span></div>`;
-      }
-      html += `</div>`;
-    }
 
-    html += `</div></div>`;
-
-    // Connector column (skip after last round)
-    if (rNum !== rounds[rounds.length-1]) {
-      html += `<div style="width:20px;flex-shrink:0;"></div>`;
+      html += '</div>';
     }
   }
 
   html += '</div>';
-  document.getElementById('bracket-main').innerHTML = html;
-}
-
-function renderStaticRosters() {
-  // Fallback: show all drafters' teams in a simple list grouped by drafter
-  let html = '<div style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:0.7rem;margin-bottom:1rem;">Live bracket unavailable — showing draft picks</div>';
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;">';
-  for (const [name, data] of Object.entries(DRAFTERS)) {
-    html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1rem;">
-      <div style="font-size:0.9rem;font-weight:800;margin-bottom:8px;color:${data.you?'var(--accent)':'var(--text)'}">${name}</div>`;
-    data.teams.forEach(team => {
-      const out = isEliminated(team);
-      html += `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:0.75rem;">
-        <div class="dot ${out?'out':'alive'}"></div>
-        <span style="${out?'text-decoration:line-through;color:var(--dim)':''};font-weight:700">${team}</span>
-      </div>`;
-    });
-    html += '</div>';
-  }
-  html += '</div>';
-  document.getElementById('bracket-main').innerHTML = html;
+  container.innerHTML = html;
 }
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
